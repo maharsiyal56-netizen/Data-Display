@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Bio Data – Form Submissions</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f4f7fc;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .profile-img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            background: #ddd;
+        }
+
+        .name {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid #ecf0f1;
+            padding-bottom: 0.5rem;
+        }
+
+        .info-label {
+            font-weight: 600;
+            width: 100px;
+            color: #2c3e50;
+        }
+
+        .info-value {
+            color: #555;
+            flex: 1;
+        }
+
+        .no-data {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #7f8c8d;
+            padding: 3rem;
+        }
+
+        .loading {
+            text-align: center;
+            font-size: 1.2rem;
+            padding: 3rem;
+            color: #2c3e50;
+        }
+
+        @media (max-width: 700px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .info-label {
+                width: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Professional Bio Data</h1>
+        <div id="cards-container" class="grid">
+            <div class="loading">Loading data from Google Forms...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "YOUR_WEB_APP_URL";  // Replace with your actual Apps Script URL
+
+        async function fetchData() {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '<div class="loading">Fetching data...</div>';
+
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Network error');
+                const data = await response.json();
+
+                if (!data.length) {
+                    container.innerHTML = '<div class="no-data">No submissions yet. Fill out the Google Form first.</div>';
+                    return;
+                }
+
+                renderCards(data);
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = '<div class="no-data">Failed to load data. Please check API URL or CORS settings.</div>';
+            }
+        }
+
+        function renderCards(entries) {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+
+            entries.forEach(entry => {
+                const card = document.createElement('div');
+                card.className = 'card';
+
+                // Profile picture placeholder if URL missing
+                const profilePic = entry.profilePic && entry.profilePic.startsWith('http') 
+                    ? entry.profilePic 
+                    : 'https://via.placeholder.com/80?text=No+Image';
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <img class="profile-img" src="${profilePic}" alt="Profile Picture" onerror="this.src='https://via.placeholder.com/80?text=Error'">
+                        <div>
+                            <div class="name">${escapeHtml(entry.name || 'N/A')}</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-row">
+                            <div class="info-label">Age</div>
+                            <div class="info-value">${escapeHtml(entry.age || '—')}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">CNIC</div>
+                            <div class="info-value">${escapeHtml(entry.cnic || '—')}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Date of Birth</div>
+                            <div class="info-value">${escapeHtml(entry.dob || '—')}</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Birth Place</div>
+                            <div class="info-value">${escapeHtml(entry.birthPlace || '—')}</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Simple XSS protection
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+                return c;
+            });
+        }
+
+        fetchData();
+    </script>
+</body>
+</html>
